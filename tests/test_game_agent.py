@@ -5,11 +5,13 @@ cases used by the project assistant are not public.
 
 import unittest
 
+from importlib import reload
+
 import isolation
 import game_agent
 
-from importlib import reload
-
+import sample_players
+import game_agent
 
 class IsolationTest(unittest.TestCase):
     """Unit tests for isolation agents"""
@@ -20,10 +22,18 @@ class IsolationTest(unittest.TestCase):
         self.player2 = "Player2"
         self.game = isolation.Board(self.player1, self.player2)
 
-    def test_example(self):
-        # TODO: All methods must start with "test_"
-        self.fail("Hello, World!")
+    def test_greedy_player(self):
+        """Test against GreedPlayer"""
+        # create an isolation board (by default 7x7)
+        player1 = game_agent.MinimaxPlayer()
+        player2 = sample_players.GreedyPlayer()
+        game = isolation.Board(player1, player2)
 
+        # play the game automatically
+        winner, history, outcome = game.play()
+        print("\nWinner: {}\nOutcome: {}".format(winner, outcome))
+        print(game.to_string())
+        print("Move history:\n{!s}".format(history))
 
 if __name__ == '__main__':
     unittest.main()

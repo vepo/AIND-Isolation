@@ -3,7 +3,10 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
+import math
 
+import isolation
+import sample_players
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
@@ -34,8 +37,7 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    return len(game.get_legal_moves(player)) - len(game.get_legal_moves(game.get_opponent(player)))
 
 
 def custom_score_2(game, player):
@@ -212,9 +214,33 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        if game.get_player_location(self) is None:
+            return (math.floor(game.width / 2), math.floor(game.height / 2))
 
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:
+            return (-1, -1)
+        _, move = max([(self.minimax_min(game.forecast_move(m), depth - 1), m) for m in legal_moves])
+        return move
+
+    def minimax_min(self, game, depth):
+        if self.is_terminal(game, depth):
+            return self.score(game, self)
+        value = float("inf")
+        for move in game.get_legal_moves():
+            value = min(value, self.minimax_max(game.forecast_move(move), depth - 1))
+        return value
+
+    def minimax_max(self, game, depth):
+        if self.is_terminal(game, depth):
+            return self.score(game, self)
+        value = float("-inf")
+        for move in game.get_legal_moves():
+            value = max(value, self.minimax_min(game.forecast_move(move), depth - 1))
+        return value
+
+    def is_terminal(self, game, depth):
+        return depth == 0 or len(game.get_legal_moves()) == 0
 
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
@@ -307,3 +333,14 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         # TODO: finish this function!
         raise NotImplementedError
+
+if __name__ == "__main__":
+    player1 = MinimaxPlayer()
+    player2 = sample_players.GreedyPlayer()
+    game = isolation.Board(player1, player2)
+
+    # play the game automatically
+    winner, history, outcome = game.play()
+    print("\nWinner: {}\nOutcome: {}".format(winner, outcome))
+    print(game.to_string())
+    print("Move history:\n{!s}".format(history))
