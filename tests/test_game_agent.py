@@ -6,12 +6,14 @@ cases used by the project assistant are not public.
 import unittest
 
 from importlib import reload
+import math
 
 import isolation
 import game_agent
 
 import sample_players
 import game_agent
+
 
 class IsolationTest(unittest.TestCase):
     """Unit tests for isolation agents"""
@@ -22,6 +24,15 @@ class IsolationTest(unittest.TestCase):
         self.player2 = "Player2"
         self.game = isolation.Board(self.player1, self.player2)
 
+    def test_minimax_againts_itself(self):
+        player1 = game_agent.MinimaxPlayer()
+        player2 = game_agent.MinimaxPlayer()
+
+        game = isolation.Board(player1, player2)
+
+        winner, history, outcome = game.play()
+        self.assertEqual(winner, player1, "Minimax must win when it start playing!")
+
     def test_greedy_player(self):
         """Test against GreedPlayer"""
         # create an isolation board (by default 7x7)
@@ -31,9 +42,34 @@ class IsolationTest(unittest.TestCase):
 
         # play the game automatically
         winner, history, outcome = game.play()
-        print("\nWinner: {}\nOutcome: {}".format(winner, outcome))
-        print(game.to_string())
-        print("Move history:\n{!s}".format(history))
+        self.assertEqual(winner, player1, "Minimax must win when it start playing!")
+
+        game = isolation.Board(player2, player1)
+
+        # play the game automatically
+        winner, history, outcome = game.play()
+        self.assertEqual(winner, player1, "Minimax must win when greed start playing!")
+
+        game = isolation.Board(player2, player1)
+
+        game.apply_move((math.floor(game.height / 2), math.floor(game.width / 2)))
+
+        # play the game automatically
+        winner, history, outcome = game.play()
+        self.assertEqual(winner, player1, "Minimax must win when greed start playing in the middle!")
+
+        game = isolation.Board(player1, player2, 15, 15)
+
+        # play the game automatically
+        winner, history, outcome = game.play()
+        self.assertEqual(winner, player1, "Minimax must win in a large board!")
+
+        game = isolation.Board(player1, player2, 3, 5)
+
+        # play the game automatically
+        winner, history, outcome = game.play()
+        self.assertEqual(winner, player1, "Minimax must win in a small board!")
+
 
 if __name__ == '__main__':
     unittest.main()

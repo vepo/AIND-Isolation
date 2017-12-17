@@ -214,8 +214,8 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if game.get_player_location(self) is None:
-            return (math.floor(game.width / 2), math.floor(game.height / 2))
+        if game.get_player_location(self) is None and game.get_player_location(game.get_opponent(self)) is None:
+            return (math.floor(game.height / 2), math.floor(game.width / 2))
 
         legal_moves = game.get_legal_moves()
         if not legal_moves:
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     game = isolation.Board(player1, player2)
 
     # play the game automatically
-    winner, history, outcome = game.play()
+    winner, history, outcome = game.play(500)
     print("\nWinner: {}\nOutcome: {}".format(winner, outcome))
     print(game.to_string())
     print("Move history:\n{!s}".format(history))
