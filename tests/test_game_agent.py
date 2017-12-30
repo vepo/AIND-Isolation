@@ -12,8 +12,6 @@ import isolation
 import game_agent
 
 import sample_players
-import game_agent
-
 
 class IsolationTest(unittest.TestCase):
     """Unit tests for isolation agents"""
@@ -24,14 +22,15 @@ class IsolationTest(unittest.TestCase):
         self.player2 = "Player2"
         self.game = isolation.Board(self.player1, self.player2)
 
-    def test_minimax_againts_itself(self):
-        player1 = game_agent.MinimaxPlayer()
-        player2 = game_agent.MinimaxPlayer()
+    def test_alpha_beta(self):
+        """Test Alfa beta agains GreedPlayer"""
+        player1 = game_agent.AlphaBetaPlayer()
+        player2 = sample_players.GreedyPlayer()
 
-        game = isolation.Board(player1, player2)
+        game = isolation.Board(player1, player2, 3, 5)
 
         winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Minimax must win when it start playing!")
+        self.assertEqual(winner, player1, "Alphabeta must win when it starts playing")
 
     def test_greedy_player(self):
         """Test against GreedPlayer"""
