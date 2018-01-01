@@ -30,44 +30,32 @@ class IsolationTest(unittest.TestCase):
         game = isolation.Board(player1, player2, 3, 5)
 
         winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Alphabeta must win when it starts playing")
+        self.assertNotEqual(outcome, 'forfeit', "AlphaBeta should not lost by forfeit")
+        self.assertNotEqual(outcome, 'timeout', "AlphaBeta should not lost by timeout")
+
+        game = isolation.Board(player1, player2)
+
+        winner, history, outcome = game.play()
+        self.assertNotEqual(outcome, 'forfeit', "AlphaBeta should not lost by forfeit")
+        self.assertNotEqual(outcome, 'timeout', "AlphaBeta should not lost by timeout")
 
     def test_greedy_player(self):
         """Test against GreedPlayer"""
         # create an isolation board (by default 7x7)
         player1 = game_agent.MinimaxPlayer()
         player2 = sample_players.GreedyPlayer()
-        game = isolation.Board(player1, player2)
-
-        # play the game automatically
-        winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Minimax must win when it start playing!")
-
-        game = isolation.Board(player2, player1)
-
-        # play the game automatically
-        winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Minimax must win when greed start playing!")
-
-        game = isolation.Board(player2, player1)
-
-        game.apply_move((math.floor(game.height / 2), math.floor(game.width / 2)))
-
-        # play the game automatically
-        winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Minimax must win when greed start playing in the middle!")
-
-        game = isolation.Board(player1, player2, 15, 15)
-
-        # play the game automatically
-        winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Minimax must win in a large board!")
 
         game = isolation.Board(player1, player2, 3, 5)
 
-        # play the game automatically
         winner, history, outcome = game.play()
-        self.assertEqual(winner, player1, "Minimax must win in a small board!")
+        self.assertNotEqual(outcome, 'forfeit', "MinimaxPlayer should not lost by forfeit")
+        self.assertNotEqual(outcome, 'timeout', "MinimaxPlayer should not lost by timeout")
+
+        game = isolation.Board(player1, player2)
+
+        winner, history, outcome = game.play()
+        self.assertNotEqual(outcome, 'forfeit', "MinimaxPlayer should not lost by forfeit")
+        self.assertNotEqual(outcome, 'timeout', "MinimaxPlayer should not lost by timeout")
 
 
 if __name__ == '__main__':

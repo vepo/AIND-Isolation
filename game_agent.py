@@ -153,7 +153,7 @@ class IsolationPlayer:
         positive value large enough to allow the function to return before the
         timer expires.
     """
-    def __init__(self, search_depth=3, score_fn=custom_score, timeout=10.):
+    def __init__(self, search_depth=3, score_fn=custom_score_3, timeout=10.):
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
@@ -165,6 +165,8 @@ class MinimaxPlayer(IsolationPlayer):
     search. You must finish and test this player to make sure it properly uses
     minimax to return a good move before the search time limit expires.
     """
+
+    good_start_positions = [(1, 2), (1, 4), (3, 4), (4, 1), (4, 3), (4, 4), (4, 5), (5, 4), (5, 6)]
 
     def get_move(self, game, time_left):
         """Search for the best move from the available legal moves and return a
@@ -195,6 +197,14 @@ class MinimaxPlayer(IsolationPlayer):
             (-1, -1) if there are no available legal moves.
         """
         self.time_left = time_left
+
+        if (
+                game.width == 7 and
+                game.height == 7 and
+                game.get_player_location(self) is None and
+                game.get_player_location(game.get_opponent(self)) is None
+        ):
+            return random.choice(MinimaxPlayer.good_start_positions)
 
         # Initialize the best move so that this function returns something
         # in case the search fails due to timeout
@@ -325,6 +335,8 @@ class AlphaBetaPlayer(IsolationPlayer):
         self.time_left = time_left
 
         if (
+                game.width == 7 and
+                game.height == 7 and
                 game.get_player_location(self) is None and
                 game.get_player_location(game.get_opponent(self)) is None
         ):
