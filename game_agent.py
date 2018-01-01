@@ -7,45 +7,21 @@ import math
 
 import isolation
 import sample_players
-import os
+
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
 
+POSSIBLE_MOVEMENTS = {}
+
 def possible_move_weight(game, move):
-    r, c = move
-    directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
-                  (1, -2), (1, 2), (2, -1), (2, 1)]
-    valid_moves = [(r + dr, c + dc) for dr, dc in directions
-                   if game.move_is_legal((r + dr, c + dc))]
-    return len(valid_moves)
-
-def central_weight(game, move):
-    """Weight based on the board position
-    For a 7x7 board with CENTRAL_WEIGHT_POW = 1 , it will return:
-      [[1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0],
-       [2.0, 3.0, 4.0, 5.0, 4.0, 3.0, 2.0],
-       [3.0, 4.0, 5.0, 6.0, 5.0, 4.0, 3.0],
-       [4.0, 5.0, 6.0, 7.0, 6.0, 5.0, 4.0],
-       [3.0, 4.0, 5.0, 6.0, 5.0, 4.0, 3.0],
-       [2.0, 3.0, 4.0, 5.0, 4.0, 3.0, 2.0],
-       [1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0]]
-
-    These are the results with paramters
-
-"""
-    x, y = move
-    cx, cy = (math.floor(game.width / 2), math.floor(game.height / 2))
-    if x <= cx and y <= cy:
-        weight = float(x + y + 1)
-    elif x <= cx and y > cy:
-        weight = float(x + 2 * cy - y + 1)
-    elif x > cx and y <= cy:
-        weight = float(2 * cx - x + y + 1)
-    else:
-        weight = float(2 * cx + 2 * cy - x - y + 1)
-    return math.pow(weight, 0.3)
+    if move not in POSSIBLE_MOVEMENTS.keys():
+        r, c = move
+        directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
+                    (1, -2), (1, 2), (2, -1), (2, 1)]
+        POSSIBLE_MOVEMENTS[move] = [(r + dr, c + dc) for dr, dc in directions]
+    return sum(1 for m in POSSIBLE_MOVEMENTS[move] if game.move_is_legal(m))
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -77,11 +53,14 @@ def custom_score(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    player_moves = len(game.get_legal_moves(player))
-    opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    player_moves = set(game.get_legal_moves(player))
+    opponent_moves = set(game.get_legal_moves(game.get_opponent(player)))
+    common_moves = player_moves - opponent_moves
 
-    # This heuristic just calculate how many moves the player has more than the other player
-    return float(player_moves - opponent_moves) + central_weight(game, game.get_player_location(player))
+    deep_factor = 1 / (game.move_count + 1.0)
+    return (float(len(player_moves) + (2 * len(common_moves) / deep_factor)
+                  - (2 * deep_factor * len(common_moves))
+                  - len(opponent_moves - common_moves)))
 
 
 def custom_score_2(game, player):
@@ -112,11 +91,12 @@ def custom_score_2(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    opponent_moves = set(game.get_legal_moves(game.get_opponent(player)))
-    player_moves = set(game.get_legal_moves(player))
+    opponent_moves = game.get_legal_moves(game.get_opponent(player))
+    player_moves = game.get_legal_moves(player)
 
     # This heuristic just calculate how many moves the player has more than the other player
-    return len(player_moves) - len(opponent_moves - player_moves)
+    return (len(player_moves) * sum(possible_move_weight(game, m) for m in player_moves)
+            - len(opponent_moves) * sum(possible_move_weight(game, m) for m in opponent_moves))
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -140,20 +120,15 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    if game.is_loser(player):
-        return float("-inf")
-
-    if game.is_winner(player):
-        return float("inf")
-
-    player_moves = game.get_legal_moves(player)
-    opponent_moves = game.get_legal_moves(game.get_opponent(player))
 
     # This heuristic just calculate how many moves the player has more than the other player
-    if player_moves == opponent_moves:
-        return float(sum([possible_move_weight(game, m) for m in player_moves]))
-    else:
-        return float(len(player_moves) - len(opponent_moves)) * float(sum([possible_move_weight(game, m) for m in player_moves]))
+    opponent_moves = game.get_legal_moves(game.get_opponent(player))
+    player_moves = game.get_legal_moves(player)
+
+    # This heuristic just calculate how many moves the player has more than the other player
+    return (len(player_moves) *
+            sum(possible_move_weight(game, m) for m in player_moves) /
+            (1 + sum(possible_move_weight(game, m) for m in opponent_moves)))
 
 
 class IsolationPlayer:
@@ -424,11 +399,11 @@ class AlphaBetaPlayer(IsolationPlayer):
         if not legal_moves:
             return (-1, -1)
 
-        _, move = max([(self.minimax_min(game.forecast_move(m), depth - 1, alpha, beta), m)
-                       for m in legal_moves])
+        _, move = max((self.alphabeta_min(game.forecast_move(m), depth - 1, alpha, beta), m)
+                      for m in legal_moves)
         return move
 
-    def minimax_max(self, game, depth, alpha, beta):
+    def alphabeta_max(self, game, depth, alpha, beta):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
@@ -437,13 +412,13 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         value = float("-inf")
         for move in game.get_legal_moves():
-            value = max(value, self.minimax_min(game.forecast_move(move), depth - 1, alpha, beta))
+            value = max(value, self.alphabeta_min(game.forecast_move(move), depth - 1, alpha, beta))
             if value >= beta:
                 return value
             alpha = max(alpha, value)
         return value
 
-    def minimax_min(self, game, depth, alpha, beta):
+    def alphabeta_min(self, game, depth, alpha, beta):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
@@ -452,7 +427,7 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         value = float("inf")
         for move in game.get_legal_moves():
-            value = min(value, self.minimax_max(game.forecast_move(move), depth - 1, alpha, beta))
+            value = min(value, self.alphabeta_max(game.forecast_move(move), depth - 1, alpha, beta))
             if value <= alpha:
                 return value
             beta = min(beta, value)
