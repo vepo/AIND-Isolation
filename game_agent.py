@@ -451,10 +451,32 @@ def print_board(board):
         print(row)
 
 if __name__ == "__main__":
-    player1 = sample_players.HumanPlayer()
+    player1 = AlphaBetaPlayer()
     player2 = AlphaBetaPlayer(score_fn=sample_players.improved_score)
-    board = isolation.Board(player1, player2)
-    winner, _, termination = board.play(10000)
-    print(winner)
-    print(_)
-    print(termination)
+    best_positions = [[0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0]]
+    counter = 0
+    for i in range(0, 7):
+        for j in range(0, 7):
+            for _ in range(0, 20):
+                board = isolation.Board(player1, player2)
+                board.apply_move((i, j))
+                winner, history, termination = board.play()
+                if winner == player1:
+                    best_positions[i][j] = best_positions[i][j] + 1
+
+                board = isolation.Board(player2, player1)
+                board.apply_move((i, j))
+                winner, history, termination = board.play()
+                if winner == player1:
+                    best_positions[i][j] = best_positions[i][j] + 1
+                counter += 1
+                print('--- {}/{} ---'.format(counter, 7 * 7 * 20))
+                print_board(best_positions)
+    print('--- Final Results ---')
+    print_board(best_positions)
