@@ -152,7 +152,7 @@ class IsolationPlayer:
         positive value large enough to allow the function to return before the
         timer expires.
     """
-    def __init__(self, search_depth=3, score_fn=custom_score_2, timeout=10.):
+    def __init__(self, search_depth=3, score_fn=custom_score, timeout=10.):
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
@@ -358,7 +358,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         try:
             # The try/except block will automatically catch the exception
             # raised when the timer is about to expire.
-            deep = 4
+            deep = 1
             while True:
                 best_move = self.alphabeta(game, deep)
                 deep += 1
@@ -417,13 +417,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        legal_moves = game.get_legal_moves()
-        if not legal_moves:
-            return (-1, -1)
-
-        _, move = max((self.alphabeta_min(game.forecast_move(m), depth - 1, alpha, beta), m)
-                      for m in legal_moves)
-        return move
+        return self.alphabeta_max(game, depth, alpha, beta)[1]
 
     def alphabeta_max(self, game, depth, alpha, beta):
         """Choose max on AlphaBeta Prunning"""
@@ -431,19 +425,22 @@ class AlphaBetaPlayer(IsolationPlayer):
             raise SearchTimeout()
 
         if depth == 0:
-            return self.score(game, self)
+            return self.score(game, self), (-1, -1)
 
         legal_moves = game.get_legal_moves()
         if not legal_moves:
-            return self.score(game, self)
+            return self.score(game, self), (-1, -1)
 
-        value = float("-inf")
+        best_value, best_move = float("-inf"), (-1, -1)
         for move in legal_moves:
-            value = max(value, self.alphabeta_min(game.forecast_move(move), depth - 1, alpha, beta))
-            if value >= beta:
-                return value
-            alpha = max(alpha, value)
-        return value
+            score = self.alphabeta_min(game.forecast_move(move), depth - 1, alpha, beta)[0]
+            if score > best_value:
+                best_value = score
+                best_move = move
+            if best_value >= beta:
+                return best_value, best_move
+            alpha = max(alpha, best_value)
+        return best_value, best_move
 
     def alphabeta_min(self, game, depth, alpha, beta):
         """Choose min on AlphaBeta Prunning"""
@@ -451,16 +448,19 @@ class AlphaBetaPlayer(IsolationPlayer):
             raise SearchTimeout()
 
         if depth == 0:
-            return self.score(game, self)
+            return self.score(game, self), (-1, -1)
 
         legal_moves = game.get_legal_moves()
         if not legal_moves:
-            return self.score(game, self)
+            return self.score(game, self), (-1, -1)
 
-        value = float("inf")
+        best_value, best_move = float("inf"), (-1, -1)
         for move in legal_moves:
-            value = min(value, self.alphabeta_max(game.forecast_move(move), depth - 1, alpha, beta))
-            if value <= alpha:
-                return value
-            beta = min(beta, value)
-        return value
+            score = self.alphabeta_max(game.forecast_move(move), depth - 1, alpha, beta)[0]
+            if score < best_value:
+                best_move = move
+                best_value = score
+            if best_value <= alpha:
+                return best_value, best_move
+            beta = min(beta, best_value)
+        return best_value, best_move
