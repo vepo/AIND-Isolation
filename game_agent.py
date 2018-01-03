@@ -90,8 +90,8 @@ def custom_score_2(game, player):
 
     # This heuristic just calculate how many moves the player has more than the other player
     # And multiply this value by the possible_move_weight
-    return float(len(player_moves) * sum([possible_move_weight(game, m) for m in player_moves])
-            - len(opponent_moves) * sum([possible_move_weight(game, m) for m in opponent_moves]))
+    return float(len(player_moves) * sum(possible_move_weight(game, m) for m in player_moves)
+            - len(opponent_moves) * sum(possible_move_weight(game, m) for m in opponent_moves))
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -126,8 +126,8 @@ def custom_score_3(game, player):
 
     # This is a more simple heuristic, I made a factor based on the possible_move_weight
     return (len(player_moves) *
-            sum([possible_move_weight(game, m) for m in player_moves]) /
-            (1 + sum([possible_move_weight(game, m) for m in opponent_moves])))
+            sum(possible_move_weight(game, m) for m in player_moves) /
+            (1 + sum(possible_move_weight(game, m) for m in opponent_moves)))
 
 
 class IsolationPlayer:
