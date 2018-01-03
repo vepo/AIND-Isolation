@@ -3,25 +3,18 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
-import math
-
-import isolation
-import sample_players
-
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
 
-POSSIBLE_MOVEMENTS = {}
-
 def possible_move_weight(game, move):
-    if move not in POSSIBLE_MOVEMENTS.keys():
-        r, c = move
-        directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
-                    (1, -2), (1, 2), (2, -1), (2, 1)]
-        POSSIBLE_MOVEMENTS[move] = [(r + dr, c + dc) for dr, dc in directions]
-    return sum(1 for m in POSSIBLE_MOVEMENTS[move] if game.move_is_legal(m))
+    """Look aheah! Here I calculate a weight based on the possible moves from the possible moves"""
+    r, c = move
+    directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
+                  (1, -2), (1, 2), (2, -1), (2, 1)]
+    return len([(r + dr, c + dc) for dr, dc in directions
+                if game.move_is_legal((r + dr, c + dc))])
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -57,11 +50,12 @@ def custom_score(game, player):
     opponent_moves = set(game.get_legal_moves(game.get_opponent(player)))
     common_moves = player_moves - opponent_moves
 
-    deep_factor = 1 / (game.move_count + 1.0)
-    return (float(len(player_moves) + (2 * len(common_moves) / deep_factor)
-                  - (2 * deep_factor * len(common_moves))
-                  - len(opponent_moves - common_moves)))
-
+    #deep_factor = 1 / (game.move_count + 1.0)
+    # Here I'm calculating the heuristic based on the possible
+    # moves and the common moves from both players
+    return float(len(player_moves) + len(common_moves) * game.move_count
+                  - len(common_moves) / (game.move_count + 1.0)
+                  - len(opponent_moves - common_moves))
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -95,8 +89,9 @@ def custom_score_2(game, player):
     player_moves = game.get_legal_moves(player)
 
     # This heuristic just calculate how many moves the player has more than the other player
-    return (len(player_moves) * sum(possible_move_weight(game, m) for m in player_moves)
-            - len(opponent_moves) * sum(possible_move_weight(game, m) for m in opponent_moves))
+    # And multiply this value by the possible_move_weight
+    return float(len(player_moves) * sum([possible_move_weight(game, m) for m in player_moves])
+            - len(opponent_moves) * sum([possible_move_weight(game, m) for m in opponent_moves]))
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -120,15 +115,19 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    if game.is_loser(player):
+        return float("-inf")
 
-    # This heuristic just calculate how many moves the player has more than the other player
-    opponent_moves = game.get_legal_moves(game.get_opponent(player))
+    if game.is_winner(player):
+        return float("inf")
+
     player_moves = game.get_legal_moves(player)
+    opponent_moves = game.get_legal_moves(game.get_opponent(player))
 
-    # This heuristic just calculate how many moves the player has more than the other player
+    # This is a more simple heuristic, I made a factor based on the possible_move_weight
     return (len(player_moves) *
-            sum(possible_move_weight(game, m) for m in player_moves) /
-            (1 + sum(possible_move_weight(game, m) for m in opponent_moves)))
+            sum([possible_move_weight(game, m) for m in player_moves]) /
+            (1 + sum([possible_move_weight(game, m) for m in opponent_moves])))
 
 
 class IsolationPlayer:
@@ -198,6 +197,7 @@ class MinimaxPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
+        # Choose a start position from the best
         if (
                 game.width == 7 and
                 game.height == 7 and
@@ -270,29 +270,38 @@ class MinimaxPlayer(IsolationPlayer):
         return move
 
     def minimax_min(self, game, depth):
+        """Choose the min value on the tree"""
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if self.is_terminal(game, depth):
+        if depth == 0:
             return self.score(game, self)
+
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:
+            return self.score(game, self)
+
         value = float("inf")
-        for move in game.get_legal_moves():
+        for move in legal_moves:
             value = min(value, self.minimax_max(game.forecast_move(move), depth - 1))
         return value
 
     def minimax_max(self, game, depth):
+        """Choose the max value on the tree"""
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if self.is_terminal(game, depth):
+        if depth == 0:
             return self.score(game, self)
+
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:
+            return self.score(game, self)
+
         value = float("-inf")
-        for move in game.get_legal_moves():
+        for move in legal_moves:
             value = max(value, self.minimax_min(game.forecast_move(move), depth - 1))
         return value
-
-    def is_terminal(self, game, depth):
-        return depth == 0 or len(game.get_legal_moves()) == 0
 
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
@@ -334,6 +343,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
+        ### Choose a position from the best positions
         if (
                 game.width == 7 and
                 game.height == 7 and
@@ -416,14 +426,19 @@ class AlphaBetaPlayer(IsolationPlayer):
         return move
 
     def alphabeta_max(self, game, depth, alpha, beta):
+        """Choose max on AlphaBeta Prunning"""
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
         if depth == 0:
             return self.score(game, self)
 
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:
+            return self.score(game, self)
+
         value = float("-inf")
-        for move in game.get_legal_moves():
+        for move in legal_moves:
             value = max(value, self.alphabeta_min(game.forecast_move(move), depth - 1, alpha, beta))
             if value >= beta:
                 return value
@@ -431,52 +446,21 @@ class AlphaBetaPlayer(IsolationPlayer):
         return value
 
     def alphabeta_min(self, game, depth, alpha, beta):
+        """Choose min on AlphaBeta Prunning"""
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
         if depth == 0:
             return self.score(game, self)
 
+        legal_moves = game.get_legal_moves()
+        if not legal_moves:
+            return self.score(game, self)
+
         value = float("inf")
-        for move in game.get_legal_moves():
+        for move in legal_moves:
             value = min(value, self.alphabeta_max(game.forecast_move(move), depth - 1, alpha, beta))
             if value <= alpha:
                 return value
             beta = min(beta, value)
         return value
-
-def print_board(board):
-    print("-----------")
-    for row in board:
-        print(row)
-
-if __name__ == "__main__":
-    player1 = AlphaBetaPlayer()
-    player2 = AlphaBetaPlayer(score_fn=sample_players.improved_score)
-    best_positions = [[0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0]]
-    counter = 0
-    for i in range(0, 7):
-        for j in range(0, 7):
-            for _ in range(0, 20):
-                board = isolation.Board(player1, player2)
-                board.apply_move((i, j))
-                winner, history, termination = board.play()
-                if winner == player1:
-                    best_positions[i][j] = best_positions[i][j] + 1
-
-                board = isolation.Board(player2, player1)
-                board.apply_move((i, j))
-                winner, history, termination = board.play()
-                if winner == player1:
-                    best_positions[i][j] = best_positions[i][j] + 1
-                counter += 1
-                print('--- {}/{} ---'.format(counter, 7 * 7 * 20))
-                print_board(best_positions)
-    print('--- Final Results ---')
-    print_board(best_positions)
